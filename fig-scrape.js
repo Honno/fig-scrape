@@ -3,7 +3,9 @@ const rp = require('request-promise');
 const fs = require('fs-extra');
 
 const SITE_URL = "https://www.fig.co";
-const CAMPAIGNS_SLUG = "/campaigns";
+const CAMPAIGNS_SLUG = "campaigns";
+
+const DUMP_FOLDER = "dump";
 
 async function get_project_dict(url) {
     var html = await rp(url);
@@ -17,12 +19,14 @@ async function get_project_dict(url) {
 }
 
 async function dump_project_data(url) {
-    var dict = await get_project_dict(project_url);
-    await fs.writeFile("out.json", JSON.stringify(dict), 'utf8');
+    var dict = await get_project_dict(url);
+    var file_location = DUMP_FOLDER + '/' + dict["campaign_slug"] + ".json";
+
+    await fs.writeFile(file_location, JSON.stringify(dict, null, 2), 'utf8');
 }
 
 async function get_all_project_slugs() {
-    var html = await rp(SITE_URL + CAMPAIGNS_SLUG);
+    var html = await rp(SITE_URL + '/' + CAMPAIGNS_SLUG);
 
     var $ = cheerio.load(html);
     var script = $('head > script').eq(2).html(); // 3rd script instance holds FIG_CACHE
@@ -34,9 +38,30 @@ async function get_all_project_slugs() {
     return campaign_slugs;
 }
 
-get_all_project_slugs()
-    .then((script) => console.log(script))
-    .catch((err) => console.log(err));
+async function projects_dump() {
+    var dump_folder_exist = await fs.exists(DUMP_FOLDER);
+    if(!dump_folder_exist) {
+        await fs.mkdir(DUMP_FOLDER);
+    }
+
+    var campaigns_slugs = await get_all_project_slugs();
+
+    for(var i in campaigns_slugs) {
+        var url = SITE_URL + '/' + CAMPAIGNS_SLUG + '/' + campaigns_slugs[i];
+        dump_project_data(url)
+            .then(() => console.log(url + " scraped!"))
+            .catch((err) => {
+                   console.log(url + "  not scraped :(");
+                   console.log(err);
+            });
+    }
+}
+
+projects_dump()
+    .catch((err) => {
+        console.log("Something went wrong D:");
+        console.log(err);
+    });
 
 /* Helpers */
 
