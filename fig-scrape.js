@@ -1,5 +1,6 @@
 const cheerio = require('cheerio');
 const rp = require('request-promise');
+const fs = require('fs-extra');
 
 async function get_project_json(url) {
 
@@ -15,11 +16,18 @@ async function get_project_json(url) {
         eval(script_lines[i]); // don't ever do this lol
     }
 
-    return FIG_CACHE
+    return FIG_CACHE;
+}
+
+async function dump_project_data(url) {
+    try {
+        var json = await get_project_json(project_url);
+        await fs.writeFile("out.json", JSON.stringify(json), 'utf8');
+    } catch (err) {
+        console.log(err);
+    }
 }
 
 var project_url = "https://www.fig.co/campaigns/kingdoms-and-castles";
 
-get_project_json(project_url)
-    .then((json) => { console.log(json); })
-    .catch((err) => { console.log(err); });
+dump_project_data(project_url);
